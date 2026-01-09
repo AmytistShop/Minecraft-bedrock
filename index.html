@@ -1,1 +1,225 @@
-Ссылка на файлы и инструкцию —-> https://t.me/+D6D76k-Webg4YTAy
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Mini Minecraft Mobile</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
+<style>
+body { margin:0; overflow:hidden; background:#000 }
+
+/* ===== UI ===== */
+#ui {
+  position: fixed;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  background: rgba(0,0,0,0.5);
+  padding: 6px;
+  border-radius: 6px;
+  font-family: monospace;
+  color: white;
+}
+
+/* ===== МОБИЛЬНОЕ УПРАВЛЕНИЕ ===== */
+#mobileUI {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+#joystick {
+  position: absolute;
+  left: 20px;
+  bottom: 20px;
+  width: 120px;
+  height: 120px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 50%;
+  pointer-events: auto;
+}
+
+#stick {
+  width: 50px;
+  height: 50px;
+  background: rgba(255,255,255,0.5);
+  border-radius: 50%;
+  position: absolute;
+  left: 35px;
+  top: 35px;
+}
+
+#buttons {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+#buttons button {
+  width: 60px;
+  height: 60px;
+  font-size: 24px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(0,0,0,0.6);
+  color: white;
+}
+</style>
+</head>
+
+<body>
+
+<!-- МОБИЛЬНЫЕ КНОПКИ -->
+<div id="mobileUI">
+  <div id="joystick"><div id="stick"></div></div>
+  <div id="buttons">
+    <button id="jump">⬆</button>
+    <button id="break">⛏</button>
+    <button id="place">🧱</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+<script>
+/* ===== СЦЕНА ===== */
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb);
+
+const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+
+/* ===== СВЕТ ===== */
+scene.add(new THREE.AmbientLight(0xffffff,0.6));
+const sun = new THREE.DirectionalLight(0xffffff,0.6);
+sun.position.set(50,100,50);
+scene.add(sun);
+
+/* ===== ТЕКСТУРЫ ===== */
+function tex(draw){
+  const c=document.createElement("canvas");
+  c.width=c.height=64;
+  const x=c.getContext("2d");
+  draw(x);
+  const t=new THREE.CanvasTexture(c);
+  t.magFilter=t.minFilter=THREE.NearestFilter;
+  return t;
+}
+
+const materials = [
+  new THREE.MeshLambertMaterial({map:tex(x=>{
+    x.fillStyle="#3aa655";x.fillRect(0,0,64,64);
+    for(let i=0;i<400;i++){x.fillStyle="rgba(0,0,0,0.15)";x.fillRect(Math.random()*64,Math.random()*64,2,2);}
+  })}),
+  new THREE.MeshLambertMaterial({map:tex(x=>{
+    x.fillStyle="#8b5a2b";x.fillRect(0,0,64,64);
+    for(let i=0;i<500;i++){x.fillStyle="rgba(0,0,0,0.2)";x.fillRect(Math.random()*64,Math.random()*64,2,2);}
+  })}),
+  new THREE.MeshLambertMaterial({map:tex(x=>{
+    x.fillStyle="#888";x.fillRect(0,0,64,64);
+    for(let i=0;i<200;i++){x.strokeStyle="rgba(0,0,0,0.2)";x.beginPath();x.moveTo(Math.random()*64,Math.random()*64);x.lineTo(Math.random()*64,Math.random()*64);x.stroke();}
+  })}),
+  new THREE.MeshLambertMaterial({map:tex(x=>{
+    x.fillStyle="#e5d28a";x.fillRect(0,0,64,64);
+    for(let i=0;i<600;i++){x.fillStyle="rgba(255,255,255,0.15)";x.fillRect(Math.random()*64,Math.random()*64,1,1);}
+  })}),
+  new THREE.MeshLambertMaterial({map:tex(x=>{
+    x.fillStyle="#7b4a12";x.fillRect(0,0,64,64);
+    for(let y=0;y<64;y+=6){x.strokeStyle="rgba(0,0,0,0.3)";x.beginPath();x.moveTo(0,y);x.lineTo(64,y);x.stroke();}
+  })}),
+  new THREE.MeshLambertMaterial({map:tex(x=>{
+    x.fillStyle="#2e8b57";x.fillRect(0,0,64,64);
+    for(let i=0;i<400;i++){x.fillStyle="rgba(0,255,0,0.15)";x.fillRect(Math.random()*64,Math.random()*64,2,2);}
+  }),transparent:true}),
+  new THREE.MeshLambertMaterial({map:tex(x=>{
+    x.fillStyle="#1e90ff";x.fillRect(0,0,64,64);
+    for(let i=0;i<200;i++){x.fillStyle="rgba(255,255,255,0.2)";x.fillRect(Math.random()*64,Math.random()*64,3,1);}
+  }),transparent:true,opacity:0.8}),
+  new THREE.MeshLambertMaterial({map:tex(x=>{
+    x.fillStyle="#c19a6b";x.fillRect(0,0,64,64);
+    for(let x2=0;x2<64;x2+=16){x.strokeStyle="rgba(0,0,0,0.3)";x.beginPath();x.moveTo(x2,0);x.lineTo(x2,64);x.stroke();}
+  })})
+];
+
+/* ===== МИР ===== */
+const blocks={};
+function key(x,y,z){return`${x},${y},${z}`;}
+function addBlock(x,y,z,t){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(1,1,1),materials[t]);
+  m.position.set(x,y,z);
+  scene.add(m);
+  blocks[key(x,y,z)] = m;
+}
+
+for(let x=0;x<32;x++)for(let z=0;z<32;z++){
+  let h=3+Math.floor(Math.sin(x*0.3)+Math.cos(z*0.3));
+  for(let y=0;y<h;y++) addBlock(x,y,z,y==h-1?0:1);
+
+  if(Math.random()<0.05){
+    let th=3+Math.random()*3|0;
+    for(let i=0;i<th;i++) addBlock(x,h+i,z,4);
+    for(let dx=-2;dx<=2;dx++)for(let dz=-2;dz<=2;dz++)
+      addBlock(x+dx,h+th,z+dz,5);
+  }
+
+  if(x>12&&x<18&&z>12&&z<18) addBlock(x,2,z,6);
+}
+
+/* ===== ИГРОК ===== */
+camera.position.set(16,6,20);
+let yaw=0,pitch=0;
+const speed=0.1;
+const keys={};
+
+document.addEventListener("keydown",e=>keys[e.code]=true);
+document.addEventListener("keyup",e=>keys[e.code]=false);
+
+/* ===== МОБИЛЬНОЕ ===== */
+let joyX=0,joyY=0,lastX=0,lastY=0;
+const stick=document.getElementById("stick");
+document.getElementById("joystick").addEventListener("touchmove",e=>{
+  const t=e.touches[0];
+  joyX=Math.max(-1,Math.min(1,(t.clientX-lastX)/40));
+  joyY=Math.max(-1,Math.min(1,(t.clientY-lastY)/40));
+  stick.style.left=35+joyX*30+"px";
+  stick.style.top=35+joyY*30+"px";
+});
+document.addEventListener("touchstart",e=>{
+  lastX=e.touches[0].clientX;
+  lastY=e.touches[0].clientY;
+});
+document.addEventListener("touchmove",e=>{
+  yaw-=(e.touches[0].clientX-lastX)*0.005;
+  pitch-=(e.touches[0].clientY-lastY)*0.005;
+  pitch=Math.max(-1.5,Math.min(1.5,pitch));
+  lastX=e.touches[0].clientX;
+  lastY=e.touches[0].clientY;
+});
+
+/* ===== ЦИКЛ ===== */
+function animate(){
+  requestAnimationFrame(animate);
+  const dir=new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw));
+
+  if(keys.KeyW) camera.position.add(dir.clone().multiplyScalar(speed));
+  if(keys.KeyS) camera.position.add(dir.clone().multiplyScalar(-speed));
+  if(keys.KeyA) camera.position.add(new THREE.Vector3(dir.z,0,-dir.x).multiplyScalar(speed));
+  if(keys.KeyD) camera.position.add(new THREE.Vector3(-dir.z,0,dir.x).multiplyScalar(speed));
+
+  camera.position.add(dir.clone().multiplyScalar(-joyY*speed));
+  camera.position.add(new THREE.Vector3(-dir.z,0,dir.x).multiplyScalar(joyX*speed));
+
+  camera.rotation.set(pitch,yaw,0);
+  renderer.render(scene,camera);
+}
+animate();
+</script>
+</body>
+</html>
